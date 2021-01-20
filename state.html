@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>状态设计模式重构实践</title>
+    <style>
+      .container {
+        width: 400px;
+        height: 250px;
+        margin: 0 auto;
+        background-color: #ccc;
+      }
+      .container img {
+        width: 100px;
+        display: block;
+        margin: 0 auto;
+        padding-top: 20px;
+      }
+
+      .container .text-box {
+        margin-top: 20px;
+        text-align: center;
+      }
+      .container .text-box .tips {
+        color: red;
+      }
+
+      .container .button-group {
+        margin-top: 20px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <img
+        src="https://images-cn.ssl-images-amazon.cn/images/I/61yVjxppVmL._AC_SX679_.jpg"
+        alt=""
+        srcset=""
+      />
+      <div class="text-box">
+        <div class="tips">注意安全</div>
+        <div>当前状态：<span class="current-state">开</span></div>
+      </div>
+      <div class="button-group">
+        <button id="powerOn">powerOn</button>
+        <button id="powerOff">powerOff</button>
+        <button id="open">open</button>
+        <button id="close">close</button>
+        <button id="cooking">cooking</button>
+      </div>
+      <div class="button-group">
+        <button id="red">red</button>
+        <button id="yellow">yellow</button>
+        <button id="green">green</button>
+      </div>
+    </div>
+    <script>
+      // 红绿灯
+      class LightContext {
+        constructor() {
+          this.currentState = '';
+          this.setState(new RedLightState(this));
+        }
+
+        setState(state) {
+          console.log(state, 'state');
+          this.currentState = state;
+          console.log(this.currentState.getStateName(), 'currentState');
+        }
+
+        info(msg) {
+          console.log(msg, 'msg');
+        }
+
+        changeRedLight() {
+          this.currentState.changeRedLight();
+        }
+        changeGreenLight() {
+          this.currentState.changeGreenLight();
+        }
+        changeYellowLight() {
+          this.currentState.changeYellowLight();
+        }
+      }
+
+      class LightState {
+        constructor(stateName) {
+          this.stateName = stateName;
+          this.getStateName = function () {
+            return this.stateName;
+          };
+        }
+      }
+
+      // 维护一个状态
+      class RedLightState extends LightState {
+        constructor(ctx) {
+          super('红灯');
+          this.ctx = ctx;
+        }
+
+        changeRedLight() {
+          this.ctx.info('当前已是红灯');
+        }
+        changeGreenLight() {
+          this.ctx.setState(new GreenLightState(this.ctx));
+        }
+        changeYellowLight() {
+          this.ctx.setState(new YellowLightState(this.ctx));
+        }
+      }
+
+      class GreenLightState extends LightState {
+        constructor(ctx) {
+          super('绿灯');
+          this.ctx = ctx;
+        }
+
+        changeRedLight() {
+          this.ctx.setState(new RedLightState(this.ctx));
+        }
+        changeGreenLight() {
+          this.ctx.info('当前已是绿灯');
+        }
+        changeYellowLight() {
+          this.ctx.setState(new YellowLightState(this.ctx));
+        }
+      }
+
+      class YellowLightState extends LightState {
+        constructor(ctx) {
+          super('黄灯');
+          this.ctx = ctx;
+        }
+
+        changeRedLight() {
+          this.ctx.setState(new RedLightState(this.ctx));
+        }
+        changeGreenLight() {
+          this.ctx.setState(new GreenLightState(this.ctx));
+        }
+        changeYellowLight() {
+          this.ctx.info('当前已是黄灯');
+        }
+      }
+
+      // 状态（ 红灯、绿灯、黄灯 ）
+      // class State {
+      //   constructor(color) {
+      //     this.color = color
+      //   }
+      //   // 设置状态
+      //   handle(context) {
+      //     console.log(`turn to ${this.color} light`)
+      //     context.setState(this)
+      //   }
+      // }
+      // // 主体
+      // class Context {
+      //   constructor() {
+      //     this.state = null
+      //   }
+      //   // 获取状态
+      //   getState() {
+      //     return this.state
+      //   }
+      //   setState(state) {
+      //     this.state = state
+      //   }
+      // }
+
+      // let context = new Context()
+
+      // let green = new State('green')
+      // let yellow = new State('yellow')
+      // let red = new State('red')
+
+      // // 绿灯亮了
+      // green.handle(context)
+      // console.log(context.getState())
+
+      // yellow.handle(context)
+      // console.log(context.getState())
+
+      // red.handle(context)
+      // console.log(context.getState())
+
+      // 遇到的问题
+      // 遇到的问题 需求：断电也可以开关盖子高压锅、但是在切换到关闭盖子状态下想要按下煮饭按钮切换煮饭状态（就要判断当前状态是接电状态还是断电状态，但是当前状态是关闭状态）这种情况该怎么处理，还是说状态模式不支持这种需求？
+      // 新增两种状态可以解决，即 断电状态下关闭、断电状态下打开盖子
+      // 以下代码只满足断电状态下不能进行其他操作的情况运行
+
+      class Context {
+        constructor(elState, elTips) {
+          this.elState = elState;
+          this.elTips = elTips;
+          this.changeState(new PowerOffState(this));
+        }
+
+        changeState(state) {
+          this.currentState = state;
+          this.elState.innerText = state.getStateName();
+        }
+
+        info(msg) {
+          this.elTips.innerText = msg;
+          setTimeout(() => {
+            this.elTips.innerText = '';
+          }, 2000);
+        }
+
+        powerOn() {
+          this.currentState.powerOn();
+        }
+        powerOff() {
+          this.currentState.powerOff();
+        }
+        open() {
+          this.currentState.open();
+        }
+        close() {
+          this.currentState.close();
+        }
+        cooking() {
+          this.currentState.cooking();
+        }
+      }
+
+      // 状态基类
+      class State {
+        constructor(stateName) {
+          this.stateName = stateName;
+          this.getStateName = function () {
+            return this.stateName;
+          };
+        }
+      }
+
+      class PowerOnState extends State {
+        constructor(ctx) {
+          super('接电状态');
+          this.ctx = ctx;
+        }
+
+        powerOn() {
+          this.ctx.info('当前已是接电状态');
+        }
+        powerOff() {
+          this.ctx.changeState(new PowerOffState(this.ctx))
+        }
+        open() {
+          this.ctx.changeState(new OpenState(this.ctx))
+        }
+        close() {
+          this.ctx.info('盖子未打开，不能关闭')
+        }
+        cooking() {
+          this.ctx.changeState(new CookingState(this.ctx))
+        }
+      }
+
+      class PowerOffState extends State {
+        constructor(ctx) {
+          super('断电状态');
+          this.ctx = ctx;
+        }
+
+        powerOn() {
+          this.ctx.changeState(new PowerOnState(this.ctx));
+        }
+        powerOff() {
+          this.ctx.info('当前已是断电状态');
+        }
+        open() {
+          this.ctx.changeState(new PowerOffOpenState(this.ctx));
+        }
+        close() {
+          this.ctx.changeState(new PowerOffCloseState(this.ctx));
+        }
+        cooking() {
+          this.ctx.info('没有接电，不能煮饭');
+        }
+      }
+
+      class OpenState extends State {
+        constructor(ctx) {
+          super('打开状态');
+          this.ctx = ctx;
+        }
+
+        powerOn() {
+          this.ctx.changeState(new PowerOnState(this.ctx));
+        }
+        powerOff() {
+          this.ctx.changeState(new PowerOffState(this.ctx));
+        }
+        open() {
+          this.ctx.info('当前已是打开状态');
+        }
+        close() {
+          this.ctx.changeState(new CloseState(this.ctx));
+        }
+        cooking() {
+          this.ctx.info('当前是打开状态, 不能煮饭');
+        }
+      }
+
+      class CloseState extends State {
+        constructor(ctx) {
+          super('关闭状态');
+          this.ctx = ctx;
+        }
+
+        powerOn() {
+          this.ctx.changeState(new PowerOnState(this.ctx));
+        }
+        powerOff() {
+          this.ctx.changeState(new PowerOffState(this.ctx));
+        }
+        open() {
+          this.ctx.changeState(new OpenState(this.ctx));
+        }
+        close() {
+          this.info('当前已是关闭状态');
+        }
+        cooking() {
+          // TODO 需要判断是接电状态并且是关闭状态才能煮饭
+          this.ctx.changeState(new CookingState(this.ctx));
+        }
+      }
+
+      class CookingState extends State {
+        constructor(ctx) {
+          super('煮饭状态');
+          this.ctx = ctx;
+        }
+
+        powerOn() {
+          this.ctx.info('当前已是接电状态');
+        }
+        powerOff() {
+          this.ctx.changeState(new PowerOffState(this.ctx));
+        }
+        open() {
+          this.ctx.info('当前在煮饭状态，不能打开');
+        }
+        close() {
+          this.ctx.info('当前已是关闭状态');
+        }
+        cooking() {
+          this.ctx.info('当前已是煮饭状态');
+        }
+      }
+
+      class PowerOffCloseState extends State {
+        constructor(ctx) {
+          super('断电状态并且关闭盖子');
+          this.ctx = ctx;
+        }
+        powerOn() {
+          this.ctx.changeState(new CloseState(this.ctx));
+        }
+        powerOff() {
+          this.ctx.info('当前已是断电状态');
+        }
+        open() {
+          this.ctx.changeState(new PowerOffOpenState(this.ctx));
+        }
+        close() {
+          this.ctx.info('当前已是关闭状态');
+        }
+        cooking() {
+          this.ctx.info('没有接电，不能煮饭');
+        }
+      }
+
+      class PowerOffOpenState extends State {
+        constructor(ctx) {
+          super('断电状态并且打开盖子');
+          this.ctx = ctx;
+        }
+        powerOn() {
+          this.ctx.changeState(new OpenState(this.ctx));
+        }
+        powerOff() {
+          this.ctx.info('当前已是断电状态');
+        }
+        open() {
+          this.ctx.info('当前已是打开状态');
+        }
+        close() {
+          this.ctx.changeState(new PowerOffCloseState(this.ctx));
+        }
+        cooking() {
+          this.ctx.info('没有接电，不能煮饭');
+        }
+      }
+
+      // 高压锅
+      let powerOn = document.querySelector('#powerOn');
+      let powerOff = document.querySelector('#powerOff');
+      let open = document.querySelector('#open');
+      let close = document.querySelector('#close');
+      let cooking = document.querySelector('#cooking');
+      // 红绿灯
+      let red = document.querySelector('#red');
+      let yellow = document.querySelector('#yellow');
+      let green = document.querySelector('#green');
+
+      let elState = document.querySelector('.current-state');
+      let elTips = document.querySelector('.tips');
+      // 实例化
+      const ctx = new Context(elState, elTips);
+      const lightCtx = new LightContext();
+
+      // 高压锅
+      powerOn.addEventListener('click', function () {
+        ctx.powerOn();
+      });
+      powerOff.addEventListener('click', function () {
+        ctx.powerOff();
+      });
+      open.addEventListener('click', function () {
+        ctx.open();
+      });
+      close.addEventListener('click', function () {
+        ctx.close();
+      });
+      cooking.addEventListener('click', function () {
+        ctx.cooking();
+      });
+
+      // 红绿灯
+      red.addEventListener('click', function () {
+        lightCtx.changeRedLight();
+      });
+      yellow.addEventListener('click', function () {
+        lightCtx.changeYellowLight();
+      });
+      green.addEventListener('click', function () {
+        lightCtx.changeGreenLight();
+      });
+    </script>
+  </body>
+</html>

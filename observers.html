@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>观察者设计模式重构实践</title>
+  </head>
+  <style>
+    .container {
+      width: 200px;
+      min-height: 300px;
+      height: auto;
+      background-color: #ccc;
+      margin: 20px auto 0;
+    }
+    .active {
+      font-weight: 900;
+      color: red;
+    }
+  </style>
+  <body>
+    <!-- 基础版本 -->
+    <!-- <div class="container">
+    <input />
+    <div class="boxs">
+      <div class="box" id="a">a</div>
+      <div class="box" id="b">b</div>
+      <div class="box" id="c">包含数字</div>
+    </div>
+  </div>
+  <script>
+    document.querySelector('input').addEventListener('input', function() {
+      document.querySelector('#a').classList.toggle('active', this.value.indexOf('a') !== -1)
+      document.querySelector('#b').classList.toggle('active', this.value.indexOf('b') !== -1)
+      document.querySelector('#c').classList.toggle('active', /\d/.test(this.value))
+    })
+  </script> -->
+
+    <!-- 使用观察者模式重构 -->
+    <div class="container">
+      <input />
+      <div class="boxs"></div>
+    </div>
+
+    <script>
+      // Input 类
+      // 维护所有的观察者
+      // 并且把文本输入框的变化通知观察者
+      class Input {
+        constructor(el) {
+          this.observers = [];
+          // 监听输入框事件
+          el.addEventListener('input', (e) => {
+            this.notifyAll(e.target.value);
+          });
+        }
+
+        // 通知所有观察者
+        notifyAll(value) {
+          this.observers.forEach((item) => {
+            item.notify(value);
+          });
+        }
+
+        // 添加观察者
+        addObservers(ob) {
+          this.observers.push(ob);
+        }
+      }
+
+      // 观察者基类 继承文档片段
+      class Observer extends DocumentFragment {
+        constructor(txt) {
+          super();
+          // 动态创建元素
+          this.div = document.createElement('div');
+          this.div.className = 'box';
+          this.div.innerText = txt;
+
+          document.querySelector('.boxs').append(this.div);
+        }
+
+        notify(value) {
+          // 由具体的子类来决定是否添加高亮
+          this.div.classList.toggle('active', this.handle(value));
+        }
+      }
+
+      // 缺省观察者子类 符合对扩展开放
+      class DefaultObserver extends Observer {
+        constructor(txt) {
+          super(txt);
+          this.txt = txt;
+        }
+        // 实现具体高亮逻辑
+        handle(value) {
+          return value.indexOf(this.txt) !== -1;
+        }
+      }
+
+      // 包含数字观察者子类 符合对扩展开放
+      class NumberObserver extends Observer {
+        constructor(txt) {
+          super(txt);
+          this.txt = txt;
+        }
+        // 实现具体高亮逻辑
+        handle(value) {
+          return /\d/.test(value);
+        }
+      }
+
+      // 实例化
+      const input = new Input(document.querySelector('input'));
+      // 添加观察者
+      input.addObservers(new DefaultObserver('a'));
+      input.addObservers(new DefaultObserver('b'));
+      input.addObservers(new DefaultObserver('c'));
+      input.addObservers(new NumberObserver('包含数字'));
+    </script>
+  </body>
+</html>

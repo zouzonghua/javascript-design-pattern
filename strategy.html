@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>策略设计模式重构实践</title>
+</head>
+<body>
+  <script>
+      // -------------------------------------start-------------------------------------------
+      // 根据不同状态和不同角色跳转不同页面
+      // admin editing 两个角色
+      // 1 2 3 共有三种状态
+      // const currentState = await api.getState();
+      // const currentRule = await api.getRole();
+
+      // function jump(currentState, currentRule) {
+      //   if (currentState === 1 && currentRule === 'admin') {
+      //     jumpPage1();
+      //   } else if (currentState === 2 && currentRule === 'admin') {
+      //     jumpPage2();
+      //   } else if (currentState === 3 && currentRule === 'admin') {
+      //     jumpPage3();
+      //   } else if (currentState === 1 && currentRule === 'editing') {
+      //     jumpPage4();
+      //   } else if (currentState === 2 && currentRule === 'editing') {
+      //     jumpPage5();
+      //   } else if (currentState === 3 && currentRule === 'editing') {
+      //     jumpPage6();
+      //   }
+      // }
+
+      const actions = new Map([
+        ['admin_1', () => {console.log('jumpPage1()')}],
+        ['admin_2', () => {console.log('jumpPage2()')}],
+        ['admin_3', () => {console.log('jumpPage3()')}],
+        ['editing_1', () => {console.log('jumpPage4()')}],
+        ['editing_2', () => {console.log('jumpPage5()')}],
+        ['editing_3', () => {console.log('jumpPage6()')}],
+        ['default', () => {console.log('default')}]
+      ])
+
+      function jump(rule, state) {
+        const action = actions.get(`${rule}_${state}`) || actions.get('default')
+        action.call(this)
+      }
+
+      jump('admin', 1)
+      // -------------------------------------end-------------------------------------------
+
+      // -------------------------------------start-------------------------------------------
+      // 两个条件拼接成字符串，并通过以条件拼接字符串作为键，以处理函数作为值的Map对象进行查找并执行
+
+      const strategy = new Map([
+        ['admin_1', () => {console.log('jumpPage1()')}],
+        ['admin_2', () => {console.log('jumpPage2()')}],
+        ['admin_3', () => {console.log('jumpPage3()')}],
+        ['editing_1', () => {console.log('jumpPage4()')}],
+        ['editing_2', () => {console.log('jumpPage5()')}],
+        ['editing_3', () => {console.log('jumpPage6()')}],
+        ['default', () => {console.log('default')}]
+      ])
+
+      class JumpPage {
+        constructor(strategy) {
+          this.role = '' // 角色
+          this.state = '' // 状态
+          this.strategy = new Map(); // 跳转页面对应的策略对象
+          this.setStrategy(strategy)
+        }
+        setRole(role) {
+          this.role = role; // 设置角色
+        }
+        setState(state) {
+          this.state = state; // 设置状态
+        }
+        setStrategy(strategy) {
+          this.strategy = strategy; // 设置跳转页面对应的策略对象
+        }
+        jump() {
+          // 把跳转页面的操作委托给对应的策略对象
+          const strategy = this.strategy.get(`${this.role}_${this.state}`) || this.strategy.get('default')
+          strategy()
+        }
+      }
+
+      var jumpPage = new JumpPage(strategy);
+      jumpPage.setRole('editing');
+      jumpPage.setState(2);
+      jumpPage.jump()
+      // -------------------------------------end-------------------------------------------
+
+      // -------------------------------------start-------------------------------------------
+      // 以Object对象作为key，以处理函数作为值的Map对象进行查找并执行
+
+      const strategy1 = () => {
+
+        const function1 = (id, type)=>{console.log('jumpPage1()',id,type)}
+        const function2 = ()=>{console.log('jumpPage2()')}
+        const function3 = ()=>{console.log('jumpPage3()')}
+        const function4 = ()=>{console.log('jumpPage4()')}
+        const function5 = ()=>{console.log('jumpPage5()')}
+        const function6 = ()=>{console.log('jumpPage6()')}
+
+        return new Map([
+          [{role: 'admin', state:1 }, function1],
+          [{role: 'admin', state:2 }, function2],
+          [{role: 'admin', state:3 }, function3],
+          [{role: 'editing', state: 1}, function4],
+          [{role: 'editing', state: 2}, function5],
+          [{role: 'editing', state: 3}, function6],
+          ['default', () => {console.log('default')}]
+        ])
+      }
+
+      class JumpPage1 {
+        constructor(strategy) {
+          this.role = '' // 角色
+          this.state = '' // 状态
+          this.strategy = new Map(); // 跳转页面对应的策略对象
+          this.setStrategy(strategy)
+        }
+        setRole(role) {
+          this.role = role; // 设置角色
+        }
+        setState(state) {
+          this.state = state; // 设置状态
+        }
+        setStrategy(strategy) {
+          this.strategy = strategy; // 设置跳转页面对应的策略对象
+        }
+        jump(id,type) {
+          // 把跳转页面的操作委托给对应的策略对象
+          // let action = [...actions].filter(([key,value])=>(key.role == this.role && key.state == this.state))
+          const strategy = [...this.strategy()].filter(item => {
+            // 取数组的第一项[key]、第二项[key,key1] 以此类推
+            const [key] = item
+            return key.role === this.role && key.state === this.state
+          })
+          // 使用 call 和 apply 绑定 this 传参数
+          // strategy.length ? strategy.forEach(([key, value]) => value.call(this,id,type)) : this.strategy.get('default')()
+          strategy.length ? strategy.forEach(([key, value]) => value.apply(this,[id,type])) : this.strategy.get('default')()
+        }
+      }
+
+      let jumpPage1 = new JumpPage1(strategy1);
+      jumpPage1.setRole('admin');
+      jumpPage1.setState(1);
+      jumpPage1.jump(1,'type')
+
+      // -------------------------------------end-------------------------------------------
+
+
+  </script>
+</body>
+</html>
