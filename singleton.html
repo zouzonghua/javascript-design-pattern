@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>单例设计模式重构实践</title>
+    <style>
+      .mask-layer {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1;
+      }
+
+      .login-wrapper {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 6000;
+
+        width: 300px;
+        height: 200px;
+        background-color: #ccc;
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        z-index: 2;
+      }
+
+      .login-wrapper .login-title {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+
+      .login-wrapper .btn-wrapper {
+        margin-top: 40px;
+        text-align: center;
+      }
+
+      .login-btn {
+        margin-top: 20px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-btn">
+      <button class="login">登录</button>
+    </div>
+
+    <!-- <div class="mask-layer">
+      <div class="login-wrapper">
+
+        <div class="login-title">
+          <div class="title-text">登录</div>
+          <div class="title-close-btn">x</div>
+        </div>
+
+        <div class="username-input">
+          <span>用户名：</span>
+          <input placeholder="请输入用户名" type="text">
+        </div>
+        <div class="password-input">
+          <span>密码：</span>
+          <input placeholder="请输入密码" type="password">
+        </div>
+
+        <div class="btn-wrapper">
+          <button class="confim-btn">登录</button>
+          <button class="clear-btn">清空</button>
+        </div>
+
+      </div>
+    </div>  -->
+
+    <script>
+      // 注意：es6 export出实例即是单例
+
+      class Login {
+        constructor() {
+          this.init();
+          // 一个标志，用来判断是否已创建了该类的实例
+          this.instance = null;
+        }
+
+        /**
+         *初始化方法
+         */
+        init() {
+          // 新建 div
+          let mask = document.createElement('div');
+          // 添加样式
+          mask.classList.add('mask-layer');
+          // 添加模版字符串
+          mask.innerHTML = `
+            <div class="login-wrapper">
+
+              <div class="login-title">
+                <div class="title-text">登录</div>
+                <div class="title-close-btn">x</div>
+              </div>
+
+              <div class="username-input">
+                <span>用户名：</span>
+                <input placeholder="请输入用户名" type="text">
+              </div>
+              <div class="password-input">
+                <span>密码：</span>
+                <input placeholder="请输入密码" type="password">
+              </div>
+
+              <div class="btn-wrapper">
+                <button class="confim-btn">登录</button>
+                <button class="clear-btn">清空</button>
+              </div>
+
+            </div> <!-- login-wrapper -->
+          `;
+
+          // 插入元素
+          document.body.insertBefore(mask, document.body.childNodes[0]);
+
+          Login.addCloseLoginEvent();
+        }
+
+        /**
+         * 静态方法: 获取实例（单例）
+         * 类相当于实例的原型 所有在类中定义的方法，都会被实例继承。
+         * 如果在一个方法前， 加上static关键字， 就表示该方法不会被实例继承， 而是直接通过类来调用， 这就称为“ 静态方法”。
+         */
+        static getInstance() {
+          if (!this.instance) {
+            this.instance = new Login();
+          } else {
+            this.getLoginDom('.mask-layer').style = 'display: block';
+          }
+
+          return this.instance;
+        }
+        /**
+         * 静态方法：获取元素
+         */
+        static getLoginDom(el) {
+          return document.querySelector(el);
+        }
+
+        /**
+         * 静态方法：注册关闭弹窗事件
+         */
+        static addCloseLoginEvent() {
+          this.getLoginDom('.title-close-btn').addEventListener('click', () => {
+            this.getLoginDom('.mask-layer').style = 'display: none';
+          });
+        }
+      }
+
+      Login.getLoginDom('.login').addEventListener('click', () => {
+        Login.getInstance();
+      });
+    </script>
+  </body>
+</html>
